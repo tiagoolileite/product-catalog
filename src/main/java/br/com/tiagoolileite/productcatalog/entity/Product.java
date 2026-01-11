@@ -71,6 +71,13 @@ public class Product {
     @NotNull
     private OffsetDateTime updatedAt;
 
+    /**
+     * JPA lifecycle callback executed before persisting the entity to the database.
+     * Automatically sets default values for fields if they are null:
+     * - Sets createdAt and updatedAt to current timestamp
+     * - Initializes price, discountPercentage, and rating to zero with proper scale
+     * - Sets active to true and stock to 0 as default values
+     */
     @PrePersist
     protected void onCreate() {
         OffsetDateTime now = OffsetDateTime.now();
@@ -83,11 +90,28 @@ public class Product {
         if (this.stock == null) this.stock = 0;
     }
 
+    /**
+     * JPA lifecycle callback executed before updating the entity in the database.
+     * Automatically updates the updatedAt timestamp to the current time
+     * to track when the record was last modified.
+     */
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = OffsetDateTime.now();
     }
 
+
+    /**
+     * Calculates and returns the final price after applying the discount percentage.
+     * This method is marked as @Transient so it's not persisted to the database.
+     *
+     * @return The final price after discount, rounded to 2 decimal places using HALF_UP rounding.
+     *         Returns null if the original price is null.
+     *         If discountPercentage is null, treats it as zero (no discount).
+     * <p>
+     * Example: If price is $100.00 and discountPercentage is 15.00,
+     *          the final price will be $85.00
+     */
     @Transient
     public BigDecimal getFinalPrice() {
         if (price == null) return null;

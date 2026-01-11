@@ -2,6 +2,8 @@ package br.com.tiagoolileite.productcatalog.repository;
 
 import br.com.tiagoolileite.productcatalog.entity.Product;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
-public interface ProductRepository extends JpaRepository<Product, Long> {
+public interface ProductRepository extends JpaRepository<Product, Long>,
+        JpaSpecificationExecutor<Product> {
 }
