@@ -55,6 +55,13 @@
 			<version>1.6.3</version>
 		</dependency>
 
+		<!-- databinding -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<scope>compile</scope>
+		</dependency>
+
 		<!-- Observability -->
 		<dependency>
 			<groupId>net.logstash.logback</groupId>
@@ -111,6 +118,11 @@
 		<dependency>
 			<groupId>org.testcontainers</groupId>
 			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
