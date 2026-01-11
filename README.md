@@ -52,6 +52,7 @@ Examples:
 - JDK 25 (recommended). Spring Boot 4 requires Java 17+.
 - Maven (or use the included `./mvnw` wrapper).
 - Git.
+- IDE with Lombok plugin installed and annotation processing enabled (IntelliJ/Eclipse/VS Code).
 
 Optional:
 - Docker (to run containers)
@@ -106,7 +107,17 @@ You can use environment variables to configure the datasource and active profile
 ```env
 SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/product_catalog
 SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=postgres
 SPRING_PROFILES_ACTIVE=local
+```
+
+Example in macOS/Linux terminal:
+
+```bash
+export DB_PASSWORD=postgres
+export DB_USER=postgres
+export DB_URL=jdbc:postgresql://localhost:5432/product-catalog
+./mvnw spring-boot:run
 ```
 
 ---
