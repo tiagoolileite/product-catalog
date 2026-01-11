@@ -1,26 +1,42 @@
 package br.com.tiagoolileite.productcatalog.service;
 
+import br.com.tiagoolileite.productcatalog.business.ProductBusiness;
 import br.com.tiagoolileite.productcatalog.dto.ProductDTO;
+import br.com.tiagoolileite.productcatalog.dto.ProductFilterDTO;
 import br.com.tiagoolileite.productcatalog.entity.Product;
+import br.com.tiagoolileite.productcatalog.exception.DuplicateResourceException;
+import br.com.tiagoolileite.productcatalog.exception.ResourceNotFoundException;
+import br.com.tiagoolileite.productcatalog.helper.BuildPageableHelper;
 import br.com.tiagoolileite.productcatalog.mapper.ProductMapper;
 import br.com.tiagoolileite.productcatalog.repository.ProductRepository;
 import br.com.tiagoolileite.productcatalog.service.impl.ProductServiceImpl;
+import br.com.tiagoolileite.productcatalog.specification.ProductSpecification;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
+import org.mockito.*;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("ProductServiceImpl Tests")
 class ProductServiceImplTest {
 
     @Mock
@@ -29,170 +45,209 @@ class ProductServiceImplTest {
     @Mock
     private ProductMapper productMapper;
 
+    @Mock
+    private ProductBusiness productBusiness;
+
     @InjectMocks
     private ProductServiceImpl productService;
 
-    @Test
-    void shouldCreateProductSuccessfully() {
-        // Arrange
-        ProductDTO inputDto = createValidProductDTO();
-        inputDto.setId(null);
-        inputDto.setCreatedAt(null);
-        inputDto.setUpdatedAt(null);
+    @Mock
+    private ProductSpecification productSpecification;
 
-        Product productEntity = createValidProductEntity();
-        productEntity.setId(null);
-        productEntity.setCreatedAt(null);
-        productEntity.setUpdatedAt(null);
+    private ProductDTO productDTO;
+    private Product productEntity;
 
-        Product savedProductEntity = createValidProductEntity();
-        savedProductEntity.setId(1L);
-        savedProductEntity.setCreatedAt(OffsetDateTime.now());
-        savedProductEntity.setUpdatedAt(OffsetDateTime.now());
-
-        ProductDTO responseDto = createValidProductDTO();
-        responseDto.setId(1L);
-        responseDto.setCreatedAt(OffsetDateTime.now());
-        responseDto.setUpdatedAt(OffsetDateTime.now());
-
-        when(productMapper.toProduct(inputDto)).thenReturn(productEntity);
-        when(productRepository.save(productEntity)).thenReturn(savedProductEntity);
-        when(productMapper.toProductDTO(savedProductEntity)).thenReturn(responseDto);
-
-        // Act
-        ProductDTO result = productService.createProduct(inputDto);
-
-        // Assert
-        assertThat(result).isNotNull();
-        assertThat(result.getId()).isEqualTo(1L);
-        assertThat(result.getSku()).isEqualTo("SKU-RUNNER-PRO-001");
-        assertThat(result.getName()).isEqualTo("Tênis Runner Pro");
-        assertThat(result.getPrice()).isEqualByComparingTo(new BigDecimal("399.90"));
-        assertThat(result.getBrandId()).isEqualTo(1L);
-        assertThat(result.getActive()).isTrue();
-        assertThat(result.getCreatedAt()).isNotNull();
-        assertThat(result.getUpdatedAt()).isNotNull();
-
-        verify(productMapper).toProduct(inputDto);
-        verify(productRepository).save(productEntity);
-        verify(productMapper).toProductDTO(savedProductEntity);
+    @BeforeEach
+    void setUp() {
+        productDTO = createValidProductDTO();
+        productEntity = createValidProductEntity();
     }
 
-    @Test
-    void shouldCallMapperWithCorrectInputDto() {
-        // Arrange
-        ProductDTO inputDto = createValidProductDTO();
-        Product productEntity = createValidProductEntity();
-        Product savedProductEntity = createValidProductEntity();
-        ProductDTO responseDto = createValidProductDTO();
+    @Nested
+    @DisplayName("Create Product")
+    class CreateProductTests {
 
-        when(productMapper.toProduct(any(ProductDTO.class))).thenReturn(productEntity);
-        when(productRepository.save(any(Product.class))).thenReturn(savedProductEntity);
-        when(productMapper.toProductDTO(any(Product.class))).thenReturn(responseDto);
+        @Test
+        @DisplayName("Should create product successfully")
+        void shouldCreateProductSuccessfully() {
+            // Arrange
+            productDTO.setId(null);
+            productEntity.setId(null);
 
-        // Act
-        productService.createProduct(inputDto);
+            Product savedProduct = createValidProductEntity();
+            savedProduct.setId(1L);
 
-        // Assert - usa ArgumentCaptor para capturar e verificar os argumentos
-        ArgumentCaptor<ProductDTO> dtoCaptor = ArgumentCaptor.forClass(ProductDTO.class);
-        verify(productMapper).toProduct(dtoCaptor.capture());
+            when(productMapper.toProduct(productDTO)).thenReturn(productEntity);
+            when(productRepository.existsBySku(productDTO.getSku())).thenReturn(false);
+            when(productRepository.save(productEntity)).thenReturn(savedProduct);
+            when(productMapper.toProductDTO(savedProduct)).thenReturn(productDTO);
 
-        ProductDTO capturedDto = dtoCaptor.getValue();
-        assertThat(capturedDto.getSku()).isEqualTo("SKU-RUNNER-PRO-001");
-        assertThat(capturedDto.getName()).isEqualTo("Tênis Runner Pro");
-        assertThat(capturedDto.getPrice()).isEqualByComparingTo(new BigDecimal("399.90"));
-        assertThat(capturedDto.getBrandId()).isEqualTo(1L);
-        assertThat(capturedDto.getActive()).isTrue();
+            // Act
+            ProductDTO result = productService.createProduct(productDTO);
+
+            // Assert
+            assertThat(result).isNotNull()
+                    .isEqualTo(productDTO);
+
+            verify(productBusiness).validateProductCreation(productDTO);
+            verify(productRepository).existsBySku(productDTO.getSku());
+            verify(productRepository).save(productEntity);
+            verify(productMapper).toProductDTO(savedProduct);
+        }
+
+        @Test
+        @DisplayName("Should throw DuplicateResourceException when SKU already exists")
+        void shouldThrowExceptionWhenSkuExists() {
+            // Arrange
+            when(productRepository.existsBySku(productDTO.getSku())).thenReturn(true);
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.createProduct(productDTO))
+                    .isInstanceOf(DuplicateResourceException.class)
+                    .hasMessageContaining("Product already exists with SKU: SKU-RUNNER-PRO-001");
+
+            verify(productRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Should throw exception when business validation fails")
+        void shouldThrowExceptionWhenBusinessValidationFails() {
+            // Arrange
+            doThrow(new IllegalArgumentException("Invalid brand")).when(productBusiness).validateProductCreation(productDTO);
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.createProduct(productDTO))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Invalid brand");
+
+            verify(productRepository, never()).existsBySku(anyString());
+            verify(productRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("Should handle repository save exception")
+        void shouldHandleRepositoryException() {
+            // Arrange
+            when(productMapper.toProduct(productDTO)).thenReturn(productEntity);
+            when(productRepository.existsBySku(productDTO.getSku())).thenReturn(false);
+            when(productRepository.save(productEntity)).thenThrow(new RuntimeException("Database error"));
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.createProduct(productDTO))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessage("Database error");
+
+            verify(productMapper, never()).toProductDTO(any());
+        }
     }
 
+    @Nested
+    @DisplayName("Get Product By ID")
+    class GetProductByIdTests {
 
-    @Test
-    void shouldCallRepositoryWithCorrectProductEntity() {
-        // Arrange
-        ProductDTO inputDto = createValidProductDTO();
-        Product productEntity = createValidProductEntity();
-        Product savedProductEntity = createValidProductEntity();
-        ProductDTO responseDto = createValidProductDTO();
+        @Test
+        @DisplayName("Should return product when ID exists")
+        void shouldReturnProductWhenIdExists() {
+            // Arrange
+            Long productId = 1L;
+            when(productRepository.findById(productId)).thenReturn(Optional.of(productEntity));
+            when(productMapper.toProductDTO(productEntity)).thenReturn(productDTO);
 
-        when(productMapper.toProduct(any(ProductDTO.class))).thenReturn(productEntity);
-        when(productRepository.save(any(Product.class))).thenReturn(savedProductEntity);
-        when(productMapper.toProductDTO(any(Product.class))).thenReturn(responseDto);
+            // Act
+            ProductDTO result = productService.getProductById(productId);
 
-        // Act
-        productService.createProduct(inputDto);
+            // Assert
+            assertThat(result).isNotNull()
+                    .isEqualTo(productDTO);
+            verify(productRepository).findById(productId);
+            verify(productMapper).toProductDTO(productEntity);
+        }
 
-        // Assert - verifica se o repository foi chamado com a entity correta
-        verify(productRepository).save(argThat(entity ->
-                entity.getSku().equals("SKU-RUNNER-PRO-001") &&
-                        entity.getName().equals("Tênis Runner Pro") &&
-                        entity.getPrice().compareTo(new BigDecimal("399.90")) == 0 &&
-                        entity.getBrandId().equals(1L) &&
-                        entity.getActive().equals(true)
-        ));
+        @Test
+        @DisplayName("Should throw ResourceNotFoundException when ID does not exist")
+        void shouldThrowExceptionWhenIdDoesNotExist() {
+            // Arrange
+            Long productId = 99L;
+            when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+            // Act & Assert
+            assertThatThrownBy(() -> productService.getProductById(productId))
+                    .isInstanceOf(ResourceNotFoundException.class)
+                    .hasMessage("Product not exist with id: " + productId);
+
+            verify(productMapper, never()).toProductDTO(any());
+        }
     }
 
-    @Test
-    void shouldCallMapperToConvertSavedEntityToDto() {
-        // Arrange
-        ProductDTO inputDto = createValidProductDTO();
-        Product productEntity = createValidProductEntity();
-        Product savedProductEntity = createValidProductEntity();
-        savedProductEntity.setId(1L);
-        ProductDTO responseDto = createValidProductDTO();
+    @Nested
+    @DisplayName("Search Products")
+    class SearchProductsTests {
 
-        when(productMapper.toProduct(any(ProductDTO.class))).thenReturn(productEntity);
-        when(productRepository.save(any(Product.class))).thenReturn(savedProductEntity);
-        when(productMapper.toProductDTO(any(Product.class))).thenReturn(responseDto);
+        @Test
+        @DisplayName("Should return a page of products matching filter")
+        void shouldReturnPageOfProducts() {
+            // Arrange
+            ProductFilterDTO filter = new ProductFilterDTO();
+            Pageable pageable = PageRequest.of(0, 10);
+            Specification<Product> spec = ProductSpecification.buildSpecification(new ProductFilterDTO());
+            Page<Product> productPage = new PageImpl<>(List.of(productEntity), pageable, 1);
 
-        // Act
-        productService.createProduct(inputDto);
+            try (MockedStatic<ProductSpecification> specMock = mockStatic(ProductSpecification.class);
+                 MockedStatic<BuildPageableHelper> pageableMock = mockStatic(BuildPageableHelper.class)) {
 
-        // Assert - verifica se o mapper foi chamado para converter a entity salva
-        verify(productMapper).toProductDTO(argThat(entity ->
-                entity.getId().equals(1L) &&
-                        entity.getSku().equals("SKU-RUNNER-PRO-001") &&
-                        entity.getName().equals("Tênis Runner Pro")
-        ));
+                specMock.when(() -> ProductSpecification.buildSpecification(filter)).thenReturn(spec);
+                pageableMock.when(() -> BuildPageableHelper.buildPageableProductFilter(filter)).thenReturn(pageable);
+
+                when(productRepository.findAll(spec, pageable)).thenReturn(productPage);
+                when(productMapper.toProductDTO(productEntity)).thenReturn(productDTO);
+
+                // Act
+                Page<ProductDTO> result = productService.searchProducts(filter);
+
+                // Assert
+                assertThat(result).isNotNull();
+                assertThat(result.getTotalElements()).isEqualTo(1);
+                assertThat(result.getContent()).containsExactly(productDTO);
+
+                specMock.verify(() -> ProductSpecification.buildSpecification(filter));
+                pageableMock.verify(() -> BuildPageableHelper.buildPageableProductFilter(filter));
+                verify(productRepository).findAll(spec, pageable);
+            }
+        }
+
+        @Test
+        @DisplayName("Should return an empty page when no products match filter")
+        void shouldReturnEmptyPageWhenNoProductsMatch() {
+            // Arrange
+            ProductFilterDTO filter = new ProductFilterDTO();
+            Pageable pageable = PageRequest.of(0, 10);
+            Specification<Product> spec = ProductSpecification.buildSpecification(new ProductFilterDTO());
+            Page<Product> emptyPage = new PageImpl<>(Collections.emptyList(), pageable, 0);
+
+            try (MockedStatic<ProductSpecification> specMock = mockStatic(ProductSpecification.class);
+                 MockedStatic<BuildPageableHelper> pageableMock = mockStatic(BuildPageableHelper.class)) {
+
+                specMock.when(() -> ProductSpecification.buildSpecification(filter)).thenReturn(spec);
+                pageableMock.when(() -> BuildPageableHelper.buildPageableProductFilter(filter)).thenReturn(pageable);
+
+                when(productRepository.findAll(spec, pageable)).thenReturn(emptyPage);
+
+                // Act
+                Page<ProductDTO> result = productService.searchProducts(filter);
+
+                // Assert
+                assertThat(result).isNotNull();
+                assertThat(result.isEmpty()).isTrue();
+                verify(productMapper, never()).toProductDTO(any());
+            }
+        }
     }
 
-    @Test
-    void shouldHandleRepositoryException() {
-        // Arrange
-        ProductDTO inputDto = createValidProductDTO();
-        Product productEntity = createValidProductEntity();
-
-        when(productMapper.toProduct(any(ProductDTO.class))).thenReturn(productEntity);
-        when(productRepository.save(any(Product.class)))
-                .thenThrow(new RuntimeException("Database error"));
-
-        // Act & Assert
-        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
-                productService.createProduct(inputDto));
-
-        verify(productMapper).toProduct(inputDto);
-        verify(productRepository).save(productEntity);
-        verify(productMapper, never()).toProductDTO(any());
-    }
-
-    @Test
-    void shouldHandleMapperException() {
-        // Arrange
-        ProductDTO inputDto = createValidProductDTO();
-
-        when(productMapper.toProduct(any(ProductDTO.class)))
-                .thenThrow(new RuntimeException("Mapping error"));
-
-        // Act & Assert
-        org.junit.jupiter.api.Assertions.assertThrows(RuntimeException.class, () ->
-                productService.createProduct(inputDto));
-
-        verify(productMapper).toProduct(inputDto);
-        verify(productRepository, never()).save(any());
-        verify(productMapper, never()).toProductDTO(any());
-    }
+    // --- Helper Methods ---
 
     private ProductDTO createValidProductDTO() {
         ProductDTO dto = new ProductDTO();
+        dto.setId(1L);
         dto.setSku("SKU-RUNNER-PRO-001");
         dto.setName("Tênis Runner Pro");
         dto.setDescription("Tênis de corrida leve e confortável");
@@ -202,11 +257,14 @@ class ProductServiceImplTest {
         dto.setBrandId(1L);
         dto.setRating(new BigDecimal("4.6"));
         dto.setActive(true);
+        dto.setCreatedAt(OffsetDateTime.now());
+        dto.setUpdatedAt(OffsetDateTime.now());
         return dto;
     }
 
     private Product createValidProductEntity() {
         Product entity = new Product();
+        entity.setId(1L);
         entity.setSku("SKU-RUNNER-PRO-001");
         entity.setName("Tênis Runner Pro");
         entity.setDescription("Tênis de corrida leve e confortável");
@@ -216,6 +274,8 @@ class ProductServiceImplTest {
         entity.setBrandId(1L);
         entity.setRating(new BigDecimal("4.6"));
         entity.setActive(true);
+        entity.setCreatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now());
         return entity;
     }
 }

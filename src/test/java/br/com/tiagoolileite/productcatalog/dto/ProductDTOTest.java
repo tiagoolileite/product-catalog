@@ -46,7 +46,7 @@ class ProductDTOTest {
         assertThat(dto.getName()).isNull();
         assertThat(dto.getDescription()).isNull();
         assertThat(dto.getPrice()).isNull();
-        assertThat(dto.getDiscountPercentage()).isNull();
+        assertThat(dto.getDiscountPercentage()).isEqualTo(BigDecimal.ZERO);
         assertThat(dto.getStock()).isNull();
         assertThat(dto.getBrandId()).isNull();
         assertThat(dto.getRating()).isNull();

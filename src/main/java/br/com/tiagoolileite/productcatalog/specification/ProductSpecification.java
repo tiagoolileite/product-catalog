@@ -32,7 +32,7 @@ public class ProductSpecification {
      * @return A JPA Specification that can be used with Spring Data JPA repositories
      */
     public static Specification<Product> buildSpecification(ProductFilterDTO productFilterDTO) {
-        return (root, query, criteriaBuilder) -> {
+        return (root, _, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             // Apply all filter predicates
