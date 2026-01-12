@@ -28,6 +28,10 @@
 	</scm>
 	<properties>
 		<java.version>25</java.version>
+		<mapstruct.version>1.6.3</mapstruct.version>
+		<logstash-logback-encoder.version>9.0</logstash-logback-encoder.version>
+		<maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
+		<jacoco-maven-plugin.version>0.8.14</jacoco-maven-plugin.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -52,7 +56,7 @@
 		<dependency>
 			<groupId>org.mapstruct</groupId>
 			<artifactId>mapstruct</artifactId>
-			<version>1.6.3</version>
+			<version>${mapstruct.version}</version>
 		</dependency>
 
 		<!-- databinding -->
@@ -66,7 +70,7 @@
 		<dependency>
 			<groupId>net.logstash.logback</groupId>
 			<artifactId>logstash-logback-encoder</artifactId>
-			<version>9.0</version>
+			<version>${logstash-logback-encoder.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>io.micrometer</groupId>
@@ -142,7 +146,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.14.1</version>
+				<version>${maven-compiler-plugin.version}</version>
 				<configuration>
 					<release>${java.version}</release>
 					<encoding>UTF-8</encoding>
@@ -156,7 +160,7 @@
 						<path>
 							<groupId>org.mapstruct</groupId>
 							<artifactId>mapstruct-processor</artifactId>
-							<version>1.6.3</version>
+							<version>${mapstruct.version}</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
@@ -174,7 +178,7 @@
 			<plugin>
 				<groupId>org.jacoco</groupId>
 				<artifactId>jacoco-maven-plugin</artifactId>
-				<version>0.8.14</version>
+				<version>${jacoco-maven-plugin.version}</version>
 				<executions>
 					<execution>
 						<id>prepare-agent</id>
